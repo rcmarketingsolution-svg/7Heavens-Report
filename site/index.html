@@ -1,0 +1,945 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Bestand &amp; Überverkäufe · 7HEAVENS</title>
+<style>
+  :root {
+    --font-anthropic-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-anthropic-serif: Georgia, "Times New Roman", serif;
+    --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 12px; --cds-gap-lg: 20px;
+    --cds-pad-xs: 4px; --cds-pad-sm: 8px; --cds-pad-md: 12px; --cds-pad-lg: 16px;
+    --cds-radius: 8px;
+    --cds-font-size-caption: 12px; --cds-font-size-body: 14px; --cds-font-size-heading: 18px; --cds-font-size-title: 28px;
+    --cds-font-weight-medium: 600;
+    --cds-dur-slow: .3s;
+    --color-fg: #1f1e1d; --color-fg-muted: #6b6a68; --color-bg: #faf9f5; --color-panel: #ffffff;
+    --color-border-line: #e6e3da; --color-ok: #2f7d32; --color-warn: #b26a00; --color-bad: #c0362c;
+    --cds-chart-muted: #e6e3da;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-fg: #ecebe8; --color-fg-muted: #a3a19c; --color-bg: #1c1b1a; --color-panel: #262523;
+      --color-border-line: #3a3936; --color-ok: #6cc070; --color-warn: #e0a040; --color-bad: #ef6b5f;
+      --cds-chart-muted: #3a3936;
+    }
+  }
+  html { background: var(--color-bg); color: var(--color-fg); }
+  body { margin: 0; font-family: var(--font-anthropic-sans); }
+  #dash-root { max-width: 1400px; margin: 0 auto; padding: 16px; }
+  .stand { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0 0 var(--cds-gap-sm); }
+  .dash-skeleton { color: var(--color-fg-muted); }
+  .login { max-width: 360px; margin: 12vh auto 0; display: flex; flex-direction: column; gap: var(--cds-gap-md); }
+  .login-title { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; }
+  .login-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0; }
+  .login-pw, .login-btn { font: inherit; font-size: 16px; padding: 10px 12px; border-radius: var(--cds-radius); border: 1px solid var(--color-border-line); background: var(--color-panel); color: var(--color-fg); }
+  .login-btn { background: var(--color-fg); color: var(--color-bg); border: 0; cursor: pointer; }
+  .login-btn:disabled { opacity: .5; cursor: default; }
+  .login[hidden], #inhalt[hidden] { display: none; }
+  .stand a { color: inherit; }
+</style>
+<script src="dash.js"></script>
+</head>
+<body>
+<div id="dash-root">
+<form class="login" id="login" autocomplete="on">
+  <h1 class="login-title">Bestand &amp; Überverkäufe</h1>
+  <p class="login-note">Die Daten sind verschlüsselt. Bitte Passwort eingeben.</p>
+  <input type="text" name="username" value="7heavens" autocomplete="username" hidden>
+  <input class="login-pw" type="password" name="pw" autocomplete="current-password" placeholder="Passwort" aria-label="Passwort" required>
+  <label class="login-note"><input type="checkbox" name="merken" checked> Auf diesem Gerät merken</label>
+  <button class="login-btn" type="submit">Öffnen</button>
+  <p class="login-note" id="login-msg" role="status"></p>
+</form>
+<div id="inhalt" hidden>
+<p class="stand"><span id="stand"></span> · <a href="#" onclick="dashLogout(); return false;">Abmelden</a></p>
+<style>
+  .bs { font-family: var(--font-anthropic-sans); display: flex; flex-direction: column; gap: var(--cds-gap-lg); }
+  .bs-title { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; }
+  .bs-lead { color: var(--color-fg-muted); margin: var(--cds-gap-xs) 0 0; font-size: var(--cds-font-size-body); }
+  .bs-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: var(--cds-gap-md); }
+  .bs-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); min-width: 0; }
+  .bs-kpi-label { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .bs-kpi-value { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; margin-top: var(--cds-gap-xs); min-height: 1.2em; }
+  .bs-bad { color: var(--color-bad); }
+  .bs-ok { color: var(--color-ok); }
+  .bs-warn { color: var(--color-warn); }
+  .bs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: var(--cds-gap-md); }
+  .bs-h { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+  .bs-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: var(--cds-gap-xs) 0 var(--cds-gap-md); }
+  .bs-scroll { overflow: auto; max-height: 30rem; }
+  .bs-tools { display: flex; gap: var(--cds-gap-sm); flex-wrap: wrap; align-items: center; margin-bottom: var(--cds-gap-sm); }
+  .bs-search { font: inherit; font-size: var(--cds-font-size-body); padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-bg); color: var(--color-fg); min-width: 0; flex: 1 1 12rem; }
+  table.bs-t { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: var(--cds-font-size-body); }
+  .bs-t th { text-align: left; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-weight: var(--cds-font-weight-medium); padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); position: sticky; top: 0; background: var(--color-panel); white-space: nowrap; }
+  .bs-t td { padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); vertical-align: middle; }
+  .bs-t .n, .bs-t th.n { text-align: right; white-space: nowrap; }
+  .bs-click tbody tr { cursor: pointer; }
+  .bs-click tbody tr:hover td { background: var(--color-bg); }
+  .bs-click tbody tr.is-sel td { background: var(--color-bg); }
+  .bs-click tbody tr.is-sel td:first-child { box-shadow: inset 3px 0 0 var(--color-bad); }
+  .bs-switch { display: inline-flex; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); overflow: hidden; }
+  .bs-switch button, .bs-btn { font: inherit; font-size: var(--cds-font-size-body); padding: var(--cds-pad-xs) var(--cds-pad-md); border: 0; background: var(--color-panel); color: var(--color-fg); cursor: pointer; }
+  .bs-switch button + button { border-left: 1px solid var(--color-border-line); }
+  .bs-switch button[aria-pressed="true"] { background: var(--color-fg); color: var(--color-bg); }
+  .bs-btn { border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); }
+  .bs-btn:disabled { opacity: .5; cursor: default; }
+  .bs-select { font: inherit; font-size: var(--cds-font-size-body); padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-bg); color: var(--color-fg); }
+  .bs-msg { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .bs-view[hidden] { display: none; }
+  .bs-view { display: flex; flex-direction: column; gap: var(--cds-gap-lg); }
+  .bs-th-sub { display: block; font-weight: 400; color: var(--color-fg-muted); }
+  .bs-gr td:first-child, .bs-sku td:first-child, .bs-nb td:first-child { white-space: nowrap; }
+  .bs-gr th:first-child, .bs-gr td:first-child, .bs-sku th:first-child, .bs-sku td:first-child { position: sticky; left: 0; background: var(--color-panel); z-index: 1; }
+  .bs-gr th:first-child, .bs-sku th:first-child { z-index: 2; }
+  /* kompakter: ohne seitliches Scrollen */
+  .bs { gap: var(--cds-gap-md); }
+  .bs-card { padding: var(--cds-pad-md); }
+  .bs-kpis { grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr)); gap: var(--cds-gap-sm); }
+  .bs-kpi-value { font-size: var(--cds-font-size-heading); }
+  .bs-kpi-label { font-size: var(--cds-font-size-caption); line-height: 1.3; }
+  .bs-h { font-size: var(--cds-font-size-body); }
+  .bs-note { margin: 2px 0 var(--cds-gap-sm); }
+  table.bs-t { font-size: var(--cds-font-size-caption); }
+  .bs-t th { white-space: normal; padding: 3px 5px; line-height: 1.2; vertical-align: bottom; }
+  .bs-t td { padding: 3px 5px; line-height: 1.3; }
+  .bs-t td:nth-child(2):not(.n) { min-width: 7rem; }
+  .bs-t .n, .bs-t th.n { white-space: nowrap; }
+  .bs-t th.n { white-space: normal; text-align: right; }
+  .bs-th-sub { font-size: 0.9em; }
+  .bs-switch button, .bs-btn, .bs-search, .bs-select { font-size: var(--cds-font-size-caption); padding: 4px 8px; }
+  .bs-t tfoot td { font-weight: var(--cds-font-weight-medium); border-top: 2px solid var(--color-border-line); border-bottom: 0; position: sticky; bottom: 0; background: var(--color-panel); white-space: nowrap; }
+  .bs-gr tfoot td:first-child, .bs-sku tfoot td:first-child { z-index: 2; }
+  .bs-bar { display: inline-block; width: 2.5rem; height: 0.4rem; border-radius: 0.2rem; background: var(--cds-chart-muted); vertical-align: middle; margin-left: var(--cds-gap-xs); overflow: hidden; }
+  .bs-bar > i { display: block; height: 100%; background: var(--color-ok); border-radius: 0.2rem; }
+  .bs-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--cds-gap-md); }
+  .bs-rank { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .bs-empty { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); padding: var(--cds-pad-sm) 0; }
+  .bs-fail { display: flex; align-items: center; justify-content: center; gap: var(--cds-gap-xs); color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); min-height: 4rem; }
+  .bs-fail::before { content: ""; width: 0.375rem; height: 0.375rem; border-radius: 50%; background: var(--color-bad); }
+  [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+  [data-dash-source-state=empty] { color: transparent; }
+</style>
+
+<div class="bs">
+  <header id="kopf">
+    <h1 class="bs-title">Bestand &amp; Überverkäufe</h1>
+    <p class="bs-lead" id="fazit">
+      <span class="dash-skeleton" data-source="kpi" data-field="artikel_mit_fehlbestand" data-row="0">—</span> Artikel (Vater | Farbe) sind überverkauft, zusammen
+      <span class="dash-skeleton" data-source="kpi" data-field="fehlbestand" data-row="0">—</span> Stück. Die erfassten Lieferungen decken davon
+      <span class="dash-skeleton" data-source="kpi" data-field="gedeckt" data-row="0">—</span> Stück.
+    </p>
+  </header>
+
+  <nav class="bs-tools" id="ansicht" aria-label="Ansicht">
+    <div class="bs-switch" role="group">
+      <button type="button" class="bs-sw" data-view="artikel" aria-pressed="true">Vater | Farbe</button>
+      <button type="button" class="bs-sw" data-view="sku" aria-pressed="false">SKU-Ebene</button>
+      <button type="button" class="bs-sw" data-view="lieferungen" aria-pressed="false">Lieferungen</button>
+    </div>
+  </nav>
+
+  <section class="bs-kpis" id="kennzahlen">
+    <div class="bs-card">
+      <div class="bs-kpi-label">Offene Bestellungen gesamt</div>
+      <div class="bs-kpi-value dash-skeleton" data-source="bestellungen" data-field="offen" data-row="0">—</div>
+      <div class="bs-kpi-label">davon teilversendet: <span class="dash-skeleton" data-source="bestellungen" data-field="teilversendet" data-row="0">—</span></div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-kpi-label">Fehlbestand gesamt (Stück)</div>
+      <div class="bs-kpi-value bs-bad dash-skeleton" data-source="kpi" data-field="fehlbestand" data-row="0">—</div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-kpi-label">Davon durch Lieferungen gedeckt</div>
+      <div class="bs-kpi-value bs-ok dash-skeleton" data-source="kpi" data-field="gedeckt" data-row="0">—</div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-kpi-label">Bleibt offen</div>
+      <div class="bs-kpi-value bs-bad dash-skeleton" data-source="kpi" data-field="offen" data-row="0">—</div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-kpi-label">Artikel mit Fehlbestand</div>
+      <div class="bs-kpi-value dash-skeleton" data-source="kpi" data-field="artikel_mit_fehlbestand" data-row="0">—</div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-kpi-label">Artikel auf Weiterverkauf</div>
+      <div class="bs-kpi-value bs-warn dash-skeleton" data-source="kpi" data-field="weiterverkauf_artikel" data-row="0">—</div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-kpi-label">Lieferungen unterwegs</div>
+      <div class="bs-kpi-value dash-skeleton" data-source="kpi" data-field="lieferungen_unterwegs" data-row="0">—</div>
+      <div class="bs-kpi-label"><span class="dash-skeleton" data-source="kpi" data-field="kartons_unterwegs" data-row="0">—</span> Kartons · <span class="dash-skeleton" data-source="kpi" data-field="zulauf_stueck" data-row="0">—</span> Stück</div>
+    </div>
+  </section>
+
+  <div class="bs-view" id="ansicht-artikel">
+  <section class="bs-card" id="top2">
+    <h2 class="bs-h">Top 20 verkaufte Artikel</h2>
+    <p class="bs-note">Vater | Farbe, alle Größen zusammen · netto verkaufte Stück der letzten 30 Tage</p>
+    <div class="bs-scroll">
+      <table class="bs-t" data-source="vf" data-row-key="schluessel">
+        <thead><tr>
+          <th data-field="schluessel">Artikel | Farbe</th>
+          <th class="n" data-field="verkauft_30t">Verkauft 30 T</th>
+          <th class="n" data-field="bestand">Bestand</th>
+          <th class="n" data-field="fehlbestand">Fehlbestand</th>
+          <th class="n" data-field="reichweite_tage">Reichweite (Tage)</th>
+          <th data-field="weiterverkauf">Weiterverkauf</th>
+        </tr></thead>
+        <tbody class="bs-top-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="bs-card" id="fehlbestand">
+    <h2 class="bs-h">Fehlbestand je Artikel und was die Lieferungen decken</h2>
+    <p class="bs-note">Fehlbestand = Summe der negativen Bestände aller Größen. Zulauf aus den Lieferscheinen wird je Größe gegen den Fehlbestand gerechnet. Zeile anklicken für die Größen und die Reichweite.</p>
+    <div class="bs-tools">
+      <input class="bs-search bs-fb-search" type="search" placeholder="Artikel oder Farbe suchen" aria-label="Artikel suchen">
+    </div>
+    <div class="bs-scroll">
+      <table class="bs-t bs-click bs-fb" data-source="vf" data-row-key="schluessel">
+        <thead><tr>
+          <th data-field="schluessel">Artikel | Farbe</th>
+          <th class="n" data-field="fehlbestand">Fehlbestand</th>
+          <th class="n" data-field="zulauf">Zulauf</th>
+          <th class="n" data-field="gedeckt">Davon gedeckt</th>
+          <th class="n" data-field="offen">Bleibt offen</th>
+          <th class="n" data-field="deckung">Deckung</th>
+          <th data-field="gedeckt_ab">Komplett gedeckt ab</th>
+          <th data-field="weiterverkauf">Weiterverkauf</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="bs-card" id="groessen">
+    <h2 class="bs-h">SKUs: <span class="bs-sel-name">—</span></h2>
+    <p class="bs-note">Verfügbarer Bestand in Shopify, die Mengen je Lieferung (nach Ankunft sortiert) und das Endergebnis = Bestand + alle Lieferungen. Artikel oben in der Fehlbestand-Tabelle anklicken.</p>
+    <div class="bs-scroll">
+      <p class="bs-note bs-gr-hint"></p>
+      <table class="bs-t bs-gr" data-source="sku_zulauf" data-row-key="sku">
+        <thead><tr class="bs-gr-head"></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="bs-card" id="nicht-bedienbar-vf">
+    <h2 class="bs-h">Artikel (Vater | Farbe), die mit den Lieferungen nicht bedient werden können</h2>
+    <p class="bs-note">Summe der offenen Mengen aller Größen, die auch nach allen erfassten Lieferungen im Minus bleiben. <span class="bs-nbv-sum" data-source="vf"></span></p>
+    <div class="bs-scroll">
+      <table class="bs-t bs-nbv" data-source="vf" data-row-key="schluessel">
+        <thead><tr>
+          <th data-field="schluessel">Artikel | Farbe</th>
+          <th class="n" data-field="offene_skus">Offene SKUs</th>
+          <th class="n" data-field="fehlbestand">Fehlbestand</th>
+          <th class="n" data-field="zulauf">Zulauf</th>
+          <th class="n" data-field="offen">Bleibt offen</th>
+          <th class="n" data-field="verkauft_30t">Verkauft 30 T</th>
+          <th data-field="weiterverkauf">Weiterverkauf</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="bs-card" id="weiterverkauf">
+    <h2 class="bs-h">Artikel auf Weiterverkauf</h2>
+    <p class="bs-note">Vater | Farbe mit mindestens einer Größe, die in Shopify auch ohne Bestand weiter verkauft wird</p>
+    <div class="bs-scroll">
+      <table class="bs-t bs-wv" data-source="vf" data-row-key="schluessel">
+        <thead><tr>
+          <th data-field="schluessel">Artikel | Farbe</th>
+          <th class="n" data-field="weiterverkauf_groessen">Größen auf Weiterverkauf</th>
+          <th class="n" data-field="bestand">Bestand</th>
+          <th class="n" data-field="fehlbestand">Fehlbestand</th>
+          <th class="n" data-field="zulauf">Zulauf</th>
+          <th class="n" data-field="verkauft_30t">Verkauft 30 T</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  </div>
+
+  <div class="bs-view" id="ansicht-sku" hidden>
+    <section class="bs-card" id="sku-ebene">
+      <h2 class="bs-h">SKU-Ebene: Bestand, Lieferungen, Endergebnis</h2>
+      <p class="bs-note">Verfügbarer Bestand in Shopify, Stück je Lieferung (nach Ankunft sortiert), Endergebnis = Bestand + alle Lieferungen. Der Excel-Export nimmt genau die Zeilen, die gerade angezeigt werden.</p>
+      <div class="bs-tools">
+        <select class="bs-select bs-sku-filter" aria-label="Welche SKUs">
+          <option value="relevant">Mit Fehlbestand oder Zulauf</option>
+          <option value="fehl">Nur mit Fehlbestand</option>
+          <option value="offen">Endergebnis negativ</option>
+          <option value="alle">Alle aktiven SKUs</option>
+        </select>
+        <input class="bs-search bs-sku-search" type="search" placeholder="SKU oder Artikel suchen" aria-label="SKU suchen">
+        <button type="button" class="bs-btn bs-xlsx" hidden>Als Excel herunterladen</button>
+        <span class="bs-msg bs-sku-count"></span>
+      </div>
+      <div class="bs-scroll" style="max-height: 40rem">
+        <table class="bs-t bs-sku" data-source="sku_zulauf" data-row-key="sku">
+          <thead><tr class="bs-sku-head"></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="bs-view" id="ansicht-lieferungen" hidden>
+    <section class="bs-card" id="lieferungen-liste">
+      <h2 class="bs-h">Lieferungen unterwegs</h2>
+      <p class="bs-note">Sortiert nach erwarteter Ankunft. Der Zulauf wird in dieser Reihenfolge zuerst auf den Fehlbestand gerechnet, der Rest geht ins Lager. Zeile anklicken für den Inhalt.</p>
+      <div class="bs-scroll">
+        <table class="bs-t bs-click bs-li" data-source="sendung_summe" data-row-key="lieferschein">
+          <thead><tr>
+            <th data-field="lieferschein">Lieferschein</th>
+            <th data-field="awb">AWB</th>
+            <th data-field="flughafen">Flughafen</th>
+            <th data-field="eta">ETA</th>
+            <th data-field="ankunft">Ankunft (erw.)</th>
+            <th class="n" data-field="kartons">Kartons</th>
+            <th class="n" data-field="stueck">Stück</th>
+            <th class="n" data-field="fuer_fehlbestand">Für Fehlbestand</th>
+            <th class="n" data-field="fuer_lager">Ins Lager</th>
+            <th class="n" data-field="nicht_zugeordnet">Nicht in Shopify</th>
+            <th data-field="status">Status</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bs-card" id="lieferung-inhalt">
+      <h2 class="bs-h">Inhalt: <span class="bs-li-name">—</span></h2>
+      <p class="bs-note">Stück je Artikel | Farbe und Größe laut Packliste. „Für Fehlbestand“ = davon geht auf überverkaufte SKUs.</p>
+      <div class="bs-scroll">
+        <table class="bs-t bs-lp" data-source="lieferung_vf" data-row-key="id">
+          <thead><tr>
+            <th data-field="artikel">Artikel | Farbe</th>
+            <th class="n" data-field="XXS">XXS</th>
+            <th class="n" data-field="XS">XS</th>
+            <th class="n" data-field="S">S</th>
+            <th class="n" data-field="M">M</th>
+            <th class="n" data-field="L">L</th>
+            <th class="n" data-field="XL">XL</th>
+            <th class="n" data-field="gesamt">Gesamt</th>
+            <th class="n" data-field="fuer_fehlbestand">Für Fehlbestand</th>
+            <th data-field="in_shopify">In Shopify</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  const parseShopify = (a) => {
+    let j = a;
+    if (typeof a === 'string') {
+      const i = a.indexOf('{"data"');
+      const k = i >= 0 ? i : a.indexOf('{"errors"');
+      if (k < 0) throw new Error(a.slice(0, 300));
+      j = JSON.parse(a.slice(k));
+    }
+    if (j && Array.isArray(j.content)) {
+      const t = j.content.map((c) => c.text || '').join('');
+      return parseShopify(t);
+    }
+    if (j && j.errors && !j.data) throw new Error(JSON.stringify(j.errors).slice(0, 300));
+    return j;
+  };
+  window.bsParseShopify = parseShopify;
+
+  dash.loader('varianten', {
+    description: 'Liest alle Seiten (je 250 Varianten) aus Shopify nach und macht je Variante eine Zeile.',
+    fn: async ({ answer, call, args }) => {
+      const rows = [];
+      let j = parseShopify(answer);
+      let pages = 0;
+      let cut = false;
+      while (true) {
+        const pv = j.data.productVariants;
+        pv.nodes.forEach((n) => {
+          const opt = (name) => (n.selectedOptions.find((o) => o.name === name) || {}).value;
+          rows.push({
+            sku: n.sku,
+            artikel: n.product.title,
+            farbe: opt('Farbe') ?? (n.selectedOptions[0] || {}).value ?? '',
+            groesse: opt('Größe') ?? (n.selectedOptions[1] || {}).value ?? '',
+            bestand: Number(n.inventoryQuantity),
+            richtlinie: n.inventoryPolicy,
+          });
+        });
+        pages += 1;
+        if (!pv.pageInfo.hasNextPage) break;
+        if (pages >= 40) { cut = true; break; }
+        const next = await call('graphql_query', { ...args, variables: { after: pv.pageInfo.endCursor } });
+        j = parseShopify(next);
+      }
+      return { columns: ['sku', 'artikel', 'farbe', 'groesse', 'bestand', 'richtlinie'], rows, cut };
+    },
+  });
+
+  dash.loader('bestellungen', {
+    description: 'Macht aus den beiden Shopify-Zählungen eine Zeile mit offenen und teilversendeten Bestellungen.',
+    fn: ({ answer }) => {
+      const d = parseShopify(answer).data;
+      return { columns: ['offen', 'teilversendet'], rows: [{ offen: Number(d.offen.count), teilversendet: Number(d.teilversendet.count) }] };
+    },
+  });
+
+  dash.loader('verkauf', {
+    description: 'Macht aus der ShopifyQL-Antwort Zeilen mit SKU und verkauften Stück als Zahl.',
+    fn: ({ answer }) => {
+      const j = parseShopify(answer);
+      const q = j.data.shopifyqlQuery;
+      if (q.parseErrors && q.parseErrors.length) throw new Error(JSON.stringify(q.parseErrors));
+      const rows = q.tableData.rows.map((r) => ({ sku: r.product_variant_sku, verkauft_30t: Number(r.net_items_sold) }));
+      return { columns: ['sku', 'verkauft_30t'], rows };
+    },
+  });
+
+  dash.calc('allokation', {
+    inputs: ['varianten', 'lieferungen', 'sendungen'],
+    title: 'Lieferschein-Positionen je SKU',
+    description: 'Ordnet jede Packlisten-Position (Artikel, Farbe, Größe) einer Shopify-Variante zu und rechnet sie nach Ankunftsdatum zuerst gegen den Fehlbestand.',
+    fn: (varianten, lieferungen, sendungen) => {
+      const norm = (s) => String(s || '').toLowerCase().replace(/forrest/g, 'forest').replace(/gray/g, 'grey').replace(/anthrazite/g, 'anthrazit').replace(/antrazit/g, 'anthrazit').replace(/[^a-z]/g, '');
+      const ankunft = new Map(sendungen.map((s) => [s.lieferschein, String(s.ankunft || '')]));
+      const byFarbe = new Map(), bySkuFarbe = new Map(), byPrefix = new Map(), rest = new Map();
+      varianten.forEach((v) => {
+        if (!v.sku) return;
+        const p = v.sku.split('-'), base = p[0], gi = p.indexOf(v.groesse);
+        byFarbe.set(base + '|' + norm(v.farbe) + '|' + v.groesse, v);
+        if (gi > 0) {
+          bySkuFarbe.set(base + '|' + norm(p.slice(gi + 1).join('')) + '|' + v.groesse, v);
+          byPrefix.set(p.slice(0, gi).join('-') + '|' + v.groesse, v);
+        }
+        rest.set(v.sku, Math.max(0, -(Number(v.bestand) || 0)));
+      });
+      const rows = lieferungen.map((l) => {
+        const art = String(l.artikel || '').replace(/\s+/g, '').toUpperCase(), base = art.split('-')[0];
+        const g = String(l.groesse || '').trim().toUpperCase(), f = norm(l.farbe);
+        const v = byFarbe.get(base + '|' + f + '|' + g) || bySkuFarbe.get(base + '|' + f + '|' + g) || (art.includes('-') ? byPrefix.get(art + '|' + g) : undefined);
+        return {
+          id: [l.lieferschein, art, l.farbe, g].join('|'), lieferschein: l.lieferschein, ankunft: ankunft.get(l.lieferschein) || '',
+          artikel: art, farbe: l.farbe, groesse: g, menge: Number(l.menge) || 0,
+          sku: v ? v.sku : '', schluessel: v ? v.artikel + ' | ' + v.farbe : '',
+        };
+      }).sort((a, b) => a.ankunft.localeCompare(b.ankunft));
+      rows.forEach((r) => {
+        const f = r.sku ? rest.get(r.sku) || 0 : 0;
+        r.fuer_fehlbestand = Math.min(f, r.menge);
+        if (r.sku) rest.set(r.sku, f - r.fuer_fehlbestand);
+      });
+      return rows;
+    },
+  });
+
+  dash.calc('groessen', {
+    inputs: ['varianten', 'verkauf', 'allokation'],
+    title: 'Je Größe: Fehlbestand & Zulauf',
+    description: 'Fehlbestand = negativer Bestand; Zulauf aus den Lieferscheinen deckt ihn nach Ankunftsdatum; Reichweite = (Bestand + Zulauf) ÷ (Verkauf 30 Tage ÷ 30).',
+    fn: (varianten, verkauf, allokation) => {
+      const sold = new Map();
+      verkauf.forEach((r) => { if (r.sku) sold.set(r.sku, (sold.get(r.sku) || 0) + (Number(r.verkauft_30t) || 0)); });
+      const inc = new Map();
+      allokation.forEach((a) => {
+        if (!a.sku) return;
+        const x = inc.get(a.sku) || { zulauf: 0, gedeckt: 0, letzte: '', naechste: '' };
+        x.zulauf += a.menge; x.gedeckt += a.fuer_fehlbestand;
+        if (a.fuer_fehlbestand > 0 && a.ankunft > x.letzte) x.letzte = a.ankunft;
+        if (!x.naechste || a.ankunft < x.naechste) x.naechste = a.ankunft;
+        inc.set(a.sku, x);
+      });
+      return varianten.filter((v) => v.sku).map((v) => {
+        const bestand = Number(v.bestand) || 0;
+        const fehlbestand = Math.max(0, -bestand);
+        const x = inc.get(v.sku) || { zulauf: 0, gedeckt: 0, letzte: '', naechste: '' };
+        const gedeckt = Math.min(fehlbestand, x.gedeckt);
+        const verkauft_30t = Math.max(0, sold.get(v.sku) || 0);
+        return {
+          sku: v.sku, schluessel: v.artikel + ' | ' + v.farbe, groesse: v.groesse,
+          weiterverkauf: v.richtlinie === 'CONTINUE' ? 'ja' : 'nein',
+          bestand, fehlbestand, zulauf: x.zulauf, gedeckt, offen: fehlbestand - gedeckt, verkauft_30t,
+          reichweite_tage: verkauft_30t > 0 ? Math.max(0, Math.round((bestand + x.zulauf) / (verkauft_30t / 30))) : null,
+          gedeckt_ab: fehlbestand > 0 && gedeckt >= fehlbestand ? x.letzte : null,
+          naechste_lieferung: x.naechste || null,
+        };
+      });
+    },
+  });
+
+  dash.calc('sku_zulauf', {
+    inputs: ['groessen', 'allokation', 'sendungen'],
+    title: 'Je SKU: Bestand, Lieferungen, Endergebnis',
+    description: 'Verfügbarer Bestand je SKU, die Stück je Lieferschein und Endergebnis = Bestand + Summe aller Lieferungen.',
+    fn: (groessen, allokation, sendungen) => {
+      const ls = sendungen.map((s) => s.lieferschein);
+      const m = new Map();
+      allokation.forEach((a) => {
+        if (!a.sku) return;
+        const x = m.get(a.sku) || {};
+        x[a.lieferschein] = (x[a.lieferschein] || 0) + a.menge;
+        m.set(a.sku, x);
+      });
+      return groessen.map((g) => {
+        const x = m.get(g.sku) || {};
+        const row = { sku: g.sku, schluessel: g.schluessel, groesse: g.groesse, bestand: g.bestand };
+        let summe = 0;
+        ls.forEach((l) => { row[l] = x[l] || 0; summe += row[l]; });
+        row.endergebnis = g.bestand + summe;
+        return row;
+      });
+    },
+  });
+
+  dash.calc('vf', {
+    inputs: ['groessen'],
+    title: 'Je Vater | Farbe',
+    description: 'Summiert die Größen je Artikel und Farbe; Deckung = gedeckt ÷ Fehlbestand; komplett gedeckt ab = Ankunft der Sendung, die die letzte Lücke schließt.',
+    fn: (groessen) => {
+      const m = new Map();
+      groessen.forEach((g) => {
+        const a = m.get(g.schluessel) || { schluessel: g.schluessel, bestand: 0, fehlbestand: 0, zulauf: 0, gedeckt: 0, offen: 0, offene_skus: 0, verkauft_30t: 0, weiterverkauf_groessen: 0, letzte: '' };
+        a.bestand += g.bestand; a.fehlbestand += g.fehlbestand; a.zulauf += g.zulauf; a.gedeckt += g.gedeckt;
+        a.offen += g.offen; if (g.offen > 0) a.offene_skus += 1; a.verkauft_30t += g.verkauft_30t; if (g.weiterverkauf === 'ja') a.weiterverkauf_groessen += 1;
+        if (g.gedeckt_ab && g.gedeckt_ab > a.letzte) a.letzte = g.gedeckt_ab;
+        m.set(g.schluessel, a);
+      });
+      return [...m.values()].map(({ letzte, ...a }) => ({
+        ...a,
+        weiterverkauf: a.weiterverkauf_groessen > 0 ? 'ja' : 'nein',
+        deckung: a.fehlbestand > 0 ? a.gedeckt / a.fehlbestand : null,
+        gedeckt_ab: a.fehlbestand > 0 && a.offen === 0 ? letzte : null,
+        reichweite_tage: a.verkauft_30t > 0 ? Math.max(0, Math.round((a.bestand + a.zulauf) / (a.verkauft_30t / 30))) : null,
+      })).sort((x, y) => y.verkauft_30t - x.verkauft_30t);
+    },
+  });
+
+  dash.calc('sendung_summe', {
+    inputs: ['sendungen', 'allokation'],
+    title: 'Je Sendung',
+    description: 'Stück je Lieferschein, davon für den Fehlbestand, ins Lager und ohne passenden Shopify-Artikel.',
+    fn: (sendungen, allokation) => sendungen.map((s) => {
+      const a = allokation.filter((r) => r.lieferschein === s.lieferschein);
+      const stueck = a.reduce((t, r) => t + r.menge, 0);
+      const zugeordnet = a.filter((r) => r.sku).reduce((t, r) => t + r.menge, 0);
+      const fuer_fehlbestand = a.reduce((t, r) => t + r.fuer_fehlbestand, 0);
+      return {
+        lieferschein: s.lieferschein, awb: s.awb, kartons: Number(s.kartons), flughafen: s.flughafen,
+        ankunft: s.ankunft, eta: s.eta, status: s.status, stueck, fuer_fehlbestand,
+        fuer_lager: zugeordnet - fuer_fehlbestand, nicht_zugeordnet: stueck - zugeordnet,
+      };
+    }).sort((x, y) => String(x.ankunft).localeCompare(String(y.ankunft))),
+  });
+
+  dash.calc('lieferung_vf', {
+    inputs: ['allokation'],
+    title: 'Lieferungsinhalt je Artikel | Farbe',
+    description: 'Summiert die Packlisten-Positionen je Lieferschein und Artikel | Farbe, je Größe und gesamt.',
+    fn: (allokation) => {
+      const m = new Map();
+      allokation.forEach((a) => {
+        const name = a.schluessel || (a.artikel + ' | ' + a.farbe);
+        const id = a.lieferschein + '|' + name;
+        const x = m.get(id) || { id, lieferschein: a.lieferschein, artikel: name, XXS: 0, XS: 0, S: 0, M: 0, L: 0, XL: 0, gesamt: 0, fuer_fehlbestand: 0, in_shopify: a.sku ? 'ja' : 'nein' };
+        if (a.groesse in x) x[a.groesse] += a.menge;
+        x.gesamt += a.menge; x.fuer_fehlbestand += a.fuer_fehlbestand;
+        if (!a.sku) x.in_shopify = 'nein';
+        m.set(id, x);
+      });
+      return [...m.values()].sort((p, q) => q.gesamt - p.gesamt);
+    },
+  });
+
+  dash.calc('kpi', {
+    inputs: ['vf', 'lieferungen', 'sendungen'],
+    title: 'Kennzahlen Überverkauf',
+    description: 'Zählt und summiert die Artikel (Vater | Farbe) mit Fehlbestand, Zulauf und Weiterverkauf.',
+    fn: (vf, lieferungen, sendungen) => [{
+      lieferungen_unterwegs: sendungen.length,
+      kartons_unterwegs: sendungen.reduce((s, x) => s + (Number(x.kartons) || 0), 0),
+      artikel_mit_fehlbestand: vf.filter((a) => a.fehlbestand > 0).length,
+      fehlbestand: vf.reduce((s, a) => s + a.fehlbestand, 0),
+      gedeckt: vf.reduce((s, a) => s + a.gedeckt, 0),
+      offen: vf.reduce((s, a) => s + a.offen, 0),
+      weiterverkauf_artikel: vf.filter((a) => a.weiterverkauf_groessen > 0).length,
+      zulauf_stueck: lieferungen.reduce((s, l) => s + (Number(l.menge) || 0), 0),
+    }],
+  });
+</script>
+
+<script>
+  const nf = new Intl.NumberFormat('de-DE');
+  const pf = new Intl.NumberFormat('de-DE', { style: 'percent', maximumFractionDigits: 0 });
+  const num = (x) => (x == null ? '' : nf.format(x));
+  const sizeOrder = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+  const sizeRank = (s) => { const i = sizeOrder.indexOf(s); return i >= 0 ? i : 100 + (Number(s) || 0); };
+  let selected = null;
+  let fbFilter = '';
+
+  const failBox = (tbody, cols, text) => {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = cols;
+    const d = document.createElement('div');
+    d.className = text ? 'bs-empty' : 'bs-fail';
+    d.textContent = text || 'Daten konnten nicht geladen werden';
+    td.append(d);
+    tr.append(td);
+    tbody.replaceChildren(tr);
+    const t = tbody.closest('table');
+    if (t && t.tFoot) t.tFoot.remove();
+  };
+
+  const NO_SUM = new Set(['reichweite_tage']);
+  const foot = (tbody, rows, cols) => {
+    const t = tbody.closest('table');
+    if (!t) return;
+    const tf = t.tFoot || t.createTFoot();
+    const tr = document.createElement('tr');
+    cols.forEach((c, i) => {
+      const td = document.createElement('td');
+      if (i === 0) {
+        td.textContent = 'Summe (' + nf.format(rows.length) + ')';
+      } else if (c.f === 'deckung') {
+        const fb = rows.reduce((s, r) => s + (Number(r.fehlbestand) || 0), 0);
+        const gd = rows.reduce((s, r) => s + (Number(r.gedeckt) || 0), 0);
+        td.className = 'n';
+        td.textContent = fb > 0 ? pf.format(gd / fb) : '';
+      } else if (c.n && !NO_SUM.has(c.f)) {
+        const v = rows.reduce((s, r) => s + (Number(r[c.f]) || 0), 0);
+        td.className = 'n';
+        td.textContent = num(v);
+        if ((c.bad && v > 0) || ((c.f === 'endergebnis' || c.f === 'bestand') && v < 0)) td.classList.add('bs-bad');
+        else if (c.f === 'endergebnis') td.classList.add('bs-ok');
+      }
+      tr.append(td);
+    });
+    tf.replaceChildren(tr);
+  };
+
+  const fill = (tbody, rows, cols, key, onRow) => {
+    tbody.replaceChildren(...rows.map((r) => {
+      const tr = document.createElement('tr');
+      tr.dataset.key = r[key];
+      cols.forEach((c) => {
+        const td = document.createElement('td');
+        if (c.n) td.className = 'n';
+        const v = r[c.f];
+        if (c.f === 'deckung') {
+          td.textContent = v == null ? '' : pf.format(v);
+          if (v != null) {
+            const bar = document.createElement('span'); bar.className = 'bs-bar';
+            const i = document.createElement('i'); i.style.width = Math.round(Math.min(1, v) * 100) + '%';
+            bar.append(i); td.append(bar);
+          }
+        } else if (c.date) {
+          td.textContent = v ? v.slice(8, 10) + '.' + v.slice(5, 7) + '.' : '';
+          td.className = '';
+        } else if (c.f === 'weiterverkauf') {
+          td.textContent = v;
+          if (v === 'ja') td.className = 'bs-warn';
+        } else {
+          td.textContent = c.n ? num(v) : (v ?? '');
+          if (c.bad && v > 0) td.classList.add('bs-bad');
+        }
+        tr.append(td);
+      });
+      if (onRow) onRow(tr, r);
+      return tr;
+    }));
+    foot(tbody, rows, cols);
+  };
+
+  const fbTable = document.querySelector('.bs-fb');
+  fbTable.addEventListener('click', (e) => {
+    const tr = e.target.closest('tr[data-key]');
+    if (!tr) return;
+    selected = tr.dataset.key;
+    draw();
+    document.getElementById('groessen').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+  document.querySelector('.bs-fb-search').addEventListener('input', (e) => { fbFilter = e.target.value.trim().toLowerCase(); draw(); });
+
+  function draw() {
+    const be = dash.data('bestellungen');
+    document.querySelectorAll('[data-source="bestellungen"]').forEach((el) => {
+      if (be.status === 'ok') { el.classList.remove('dash-skeleton'); el.textContent = num(be.data[0][el.dataset.field]); }
+      else if (be.status === 'error' || be.status === 'connect') { el.classList.remove('dash-skeleton'); el.textContent = '—'; }
+    });
+
+    const kpi = dash.data('kpi');
+    document.querySelectorAll('[data-source="kpi"]').forEach((el) => {
+      if (kpi.status === 'ok') {
+        el.classList.remove('dash-skeleton');
+        el.textContent = num(kpi.data[0][el.dataset.field]);
+      } else if (kpi.status === 'error' || kpi.status === 'connect') {
+        el.classList.remove('dash-skeleton');
+        el.textContent = '—';
+      }
+    });
+
+    const vf = dash.data('vf');
+    const topBody = document.querySelector('.bs-top-body');
+    const fbBody = fbTable.querySelector('tbody');
+    const wvBody = document.querySelector('.bs-wv tbody');
+    const grBody = document.querySelector('.bs-gr tbody');
+    if (vf.status !== 'ok') {
+      const failed = vf.status === 'error' || vf.status === 'connect';
+      [[topBody, 6], [fbBody, 8], [wvBody, 6], [document.querySelector('.bs-gr tbody'), 3]].forEach(([b, n]) => failed ? failBox(b, n) : failBox(b, n, 'Lädt …'));
+      return;
+    }
+    const rows = vf.data;
+
+    fill(topBody, rows.slice(0, 20), [
+      { f: 'schluessel' }, { f: 'verkauft_30t', n: true }, { f: 'bestand', n: true },
+      { f: 'fehlbestand', n: true, bad: true }, { f: 'reichweite_tage', n: true }, { f: 'weiterverkauf' },
+    ], 'schluessel');
+
+    const fb = rows.filter((a) => a.fehlbestand > 0)
+      .sort((x, y) => y.fehlbestand - x.fehlbestand)
+      .filter((a) => !fbFilter || a.schluessel.toLowerCase().includes(fbFilter));
+    if (!selected || !rows.some((a) => a.schluessel === selected && a.fehlbestand > 0)) selected = fb.length ? fb[0].schluessel : null;
+    if (fb.length) {
+      fill(fbBody, fb, [
+        { f: 'schluessel' }, { f: 'fehlbestand', n: true, bad: true }, { f: 'zulauf', n: true },
+        { f: 'gedeckt', n: true }, { f: 'offen', n: true, bad: true }, { f: 'deckung', n: true }, { f: 'gedeckt_ab', date: true }, { f: 'weiterverkauf' },
+      ], 'schluessel', (tr, r) => { if (r.schluessel === selected) tr.classList.add('is-sel'); });
+    } else {
+      failBox(fbBody, 8, fbFilter ? 'Kein Artikel passt zur Suche.' : 'Kein Fehlbestand.');
+    }
+
+    const wv = rows.filter((a) => a.weiterverkauf_groessen > 0).sort((x, y) => y.verkauft_30t - x.verkauft_30t);
+    if (wv.length) {
+      fill(wvBody, wv, [
+        { f: 'schluessel' }, { f: 'weiterverkauf_groessen', n: true }, { f: 'bestand', n: true },
+        { f: 'fehlbestand', n: true, bad: true }, { f: 'zulauf', n: true }, { f: 'verkauft_30t', n: true },
+      ], 'schluessel');
+    } else {
+      failBox(wvBody, 6, 'Kein Artikel steht auf Weiterverkauf.');
+    }
+
+    const nbvBody = document.querySelector('.bs-nbv tbody');
+    const nbv = rows.filter((a) => a.offen > 0).sort((x, y) => y.offen - x.offen);
+    document.querySelector('.bs-nbv-sum').textContent = nf.format(nbv.length) + ' Artikel, zusammen ' + nf.format(nbv.reduce((t, a) => t + a.offen, 0)) + ' Stück offen.';
+    if (nbv.length) fill(nbvBody, nbv, [
+      { f: 'schluessel' }, { f: 'offene_skus', n: true }, { f: 'fehlbestand', n: true, bad: true }, { f: 'zulauf', n: true },
+      { f: 'offen', n: true, bad: true }, { f: 'verkauft_30t', n: true }, { f: 'weiterverkauf' },
+    ], 'schluessel');
+    else failBox(nbvBody, 7, 'Alle Fehlbestände werden durch die Lieferungen gedeckt.');
+
+    const gr = dash.data('sku_zulauf');
+    const se2 = dash.data('sendung_summe');
+    document.querySelector('.bs-sel-name').textContent = selected || '—';
+    const head = document.querySelector('.bs-gr-head');
+    const allLs = se2.status === 'ok' ? se2.data : [];
+    if (gr.status !== 'ok' || se2.status !== 'ok') { head.replaceChildren(); failBox(grBody, 3, gr.status === 'error' || se2.status === 'error' ? null : 'Lädt …'); return; }
+    const sizes = gr.data.filter((g) => g.schluessel === selected).sort((x, y) => sizeRank(x.groesse) - sizeRank(y.groesse));
+    // nur Lieferungen zeigen, die für diesen Artikel etwas enthalten
+    const lsCols = allLs.filter((s) => sizes.some((r) => (r[s.lieferschein] || 0) > 0));
+    head.replaceChildren(...[
+      { f: 'sku', label: 'SKU' }, { f: 'bestand', label: 'Verf. Bestand', n: true },
+      ...lsCols.map((s) => ({ f: s.lieferschein, label: s.lieferschein, sub: s.ankunft ? 'Ankunft ' + s.ankunft.slice(8, 10) + '.' + s.ankunft.slice(5, 7) + '.' : '', n: true })),
+      { f: 'endergebnis', label: 'Endergebnis', n: true },
+    ].map(mkTh));
+    const nCols = lsCols.length + 3;
+    if (sizes.length) {
+      fill(grBody, sizes, [
+        { f: 'sku' }, { f: 'bestand', n: true },
+        ...lsCols.map((s) => ({ f: s.lieferschein, n: true })),
+        { f: 'endergebnis', n: true },
+      ], 'sku', (tr, r) => {
+        const last = tr.lastElementChild;
+        last.classList.add(r.endergebnis < 0 ? 'bs-bad' : 'bs-ok');
+        last.style.fontWeight = 'var(--cds-font-weight-medium)';
+        tr.children[1].classList.toggle('bs-bad', r.bestand < 0);
+      });
+      document.querySelector('.bs-gr-hint').textContent = lsCols.length
+        ? 'Gezeigt werden nur Lieferungen, in denen dieser Artikel enthalten ist (' + lsCols.length + ' von ' + allLs.length + ').'
+        : 'Dieser Artikel ist in keiner erfassten Lieferung enthalten.';
+    } else {
+      failBox(grBody, nCols, 'Artikel in der Fehlbestand-Tabelle oben anklicken.');
+      document.querySelector('.bs-gr-hint').textContent = '';
+    }
+  }
+
+  function mkTh(c) {
+    const th = document.createElement('th');
+    th.dataset.field = c.f;
+    if (c.n) th.className = 'n';
+    th.append(document.createTextNode(c.label));
+    if (c.sub) { const s = document.createElement('span'); s.className = 'bs-th-sub'; s.textContent = c.sub; th.append(s); }
+    return th;
+  }
+
+  // ---------- Ansicht umschalten ----------
+  let view = 'artikel';
+  const setView = (v) => {
+    view = v;
+    document.querySelectorAll('.bs-sw').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+    document.getElementById('ansicht-artikel').hidden = v !== 'artikel';
+    document.getElementById('ansicht-sku').hidden = v !== 'sku';
+    document.getElementById('ansicht-lieferungen').hidden = v !== 'lieferungen';
+    dash.setLink('ansicht-' + v);
+    drawSku();
+    drawLief();
+  };
+  document.querySelectorAll('.bs-sw').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
+
+  // ---------- SKU-Ebene ----------
+  let skuFilter = 'relevant', skuSearch = '', skuRows = [], skuCols = [];
+  document.querySelector('.bs-sku-filter').addEventListener('change', (e) => { skuFilter = e.target.value; drawSku(); });
+  document.querySelector('.bs-sku-search').addEventListener('input', (e) => { skuSearch = e.target.value.trim().toLowerCase(); drawSku(); });
+
+  function drawSku() {
+    const body = document.querySelector('.bs-sku tbody');
+    const head = document.querySelector('.bs-sku-head');
+    const sz = dash.data('sku_zulauf'), se = dash.data('sendung_summe');
+    const ls = se.status === 'ok' ? se.data : [];
+    skuCols = [
+      { f: 'sku', label: 'SKU' }, { f: 'schluessel', label: 'Artikel | Farbe' }, { f: 'bestand', label: 'Verf. Bestand', n: true },
+      ...ls.map((s) => ({ f: s.lieferschein, label: s.lieferschein, sub: s.ankunft ? 'Ankunft ' + s.ankunft.slice(8, 10) + '.' + s.ankunft.slice(5, 7) + '.' : '', n: true, xlsLabel: s.lieferschein + (s.ankunft ? ' (Ankunft ' + s.ankunft.slice(8, 10) + '.' + s.ankunft.slice(5, 7) + '.)' : '') })),
+      { f: 'endergebnis', label: 'Endergebnis', n: true },
+    ];
+    head.replaceChildren(...skuCols.map(mkTh));
+    if (view !== 'sku') return;
+    if (sz.status !== 'ok' || se.status !== 'ok') {
+      failBox(body, skuCols.length, sz.status === 'error' || se.status === 'error' ? null : 'Lädt …');
+      document.querySelector('.bs-sku-count').textContent = '';
+      return;
+    }
+    const zul = (r) => ls.reduce((t, s) => t + (r[s.lieferschein] || 0), 0);
+    skuRows = sz.data.filter((r) => {
+      if (skuFilter === 'relevant' && !(r.bestand < 0 || zul(r) > 0)) return false;
+      if (skuFilter === 'fehl' && !(r.bestand < 0)) return false;
+      if (skuFilter === 'offen' && !(r.endergebnis < 0)) return false;
+      return !skuSearch || (r.sku + ' ' + r.schluessel).toLowerCase().includes(skuSearch);
+    }).sort((a, b) => a.schluessel.localeCompare(b.schluessel) || sizeRank(a.groesse) - sizeRank(b.groesse));
+    if (skuRows.length) {
+      fill(body, skuRows, skuCols, 'sku', (tr, r) => {
+        const last = tr.lastElementChild;
+        last.classList.add(r.endergebnis < 0 ? 'bs-bad' : 'bs-ok');
+        tr.children[2].classList.toggle('bs-bad', r.bestand < 0);
+      });
+    } else failBox(body, skuCols.length, 'Keine SKU passt zum Filter.');
+    document.querySelector('.bs-sku-count').textContent = nf.format(skuRows.length) + ' SKUs';
+  }
+
+  // ---------- Excel (xlsx) ohne Bibliothek ----------
+  const crcTable = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = (b) => { let c = 0xffffffff; for (let i = 0; i < b.length; i++) c = crcTable[(c ^ b[i]) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  const zip = (files) => {
+    const enc = new TextEncoder(), parts = [], central = [];
+    let off = 0;
+    files.forEach(({ name, text }) => {
+      const nb = enc.encode(name), data = enc.encode(text), crc = crc32(data);
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(8, 0, true);
+      lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true); lh.setUint16(26, nb.length, true);
+      parts.push(new Uint8Array(lh.buffer), nb, data);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
+      ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true);
+      ch.setUint16(28, nb.length, true); ch.setUint32(42, off, true);
+      central.push(new Uint8Array(ch.buffer), nb);
+      off += 30 + nb.length + data.length;
+    });
+    const cdSize = central.reduce((t, p) => t + p.length, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, cdSize, true); end.setUint32(16, off, true);
+    return new Blob([...parts, ...central, new Uint8Array(end.buffer)]);
+  };
+  const xml = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
+  const colName = (i) => { let s = ''; i += 1; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+  const buildXlsx = (cols, rows) => {
+    const cell = (v, r, c, style) => {
+      const ref = colName(c) + r;
+      if (typeof v === 'number' && Number.isFinite(v)) return `<c r="${ref}"${style ? ` s="${style}"` : ''}><v>${v}</v></c>`;
+      return `<c r="${ref}" t="inlineStr"${style ? ` s="${style}"` : ''}><is><t>${xml(v)}</t></is></c>`;
+    };
+    const lines = [`<row r="1">${cols.map((c, i) => cell(c.xlsLabel || c.label, 1, i, 1)).join('')}</row>`];
+    rows.forEach((r, ri) => lines.push(`<row r="${ri + 2}">${cols.map((c, i) => cell(c.n ? Number(r[c.f]) || 0 : r[c.f], ri + 2, i, c.f === 'endergebnis' ? (r.endergebnis < 0 ? 2 : 3) : 0)).join('')}</row>`));
+    const widths = cols.map((c, i) => `<col min="${i + 1}" max="${i + 1}" width="${c.f === 'schluessel' ? 38 : c.f === 'sku' ? 30 : 16}" customWidth="1"/>`).join('');
+    const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${widths}</cols><sheetData>${lines.join('')}</sheetData><autoFilter ref="A1:${colName(cols.length - 1)}${rows.length + 1}"/></worksheet>`;
+    const styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFC00000"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FF007A33"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+    return zip([
+      { name: '[Content_Types].xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>' },
+      { name: '_rels/.rels', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
+      { name: 'xl/workbook.xml', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="SKU-Ebene" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">\'SKU-Ebene\'!$A$1:$' + colName(cols.length - 1) + '$' + (rows.length + 1) + '</definedName></definedNames></workbook>' },
+      { name: 'xl/_rels/workbook.xml.rels', text: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' },
+      { name: 'xl/worksheets/sheet1.xml', text: sheet },
+      { name: 'xl/styles.xml', text: styles },
+    ]);
+  };
+  window.bsBuildXlsx = buildXlsx;
+
+  const xBtn = document.querySelector('.bs-xlsx');
+  const xMsg = document.querySelector('.bs-sku-count');
+  let downloads = null;
+  (async () => {
+    try { downloads = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (e) { downloads = null; }
+    xBtn.hidden = !downloads;
+  })();
+  xBtn.addEventListener('click', async () => {
+    if (!downloads || !skuRows.length) return;
+    xBtn.disabled = true;
+    const d = new Date(), stamp = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    try {
+      await downloads.save({ filename: `SKU-Ebene_Bestand_Lieferungen_${stamp}.xlsx`, data: buildXlsx(skuCols, skuRows) });
+      xMsg.textContent = 'Excel gespeichert';
+    } catch (e) {
+      const code = e && e.code;
+      if (code === 'unavailable' || code === 'not_granted' || code === 'capability_disabled' || code === 'capability_removed') xBtn.hidden = true;
+      xMsg.textContent = code === 'declined' ? 'Download abgebrochen' : code === 'rate_limited' ? 'Bitte kurz warten und erneut versuchen' : 'Download nicht möglich';
+    } finally { xBtn.disabled = false; }
+  });
+
+  // ---------- Lieferungen ----------
+  let liSel = null;
+  document.querySelector('.bs-li').addEventListener('click', (e) => {
+    const tr = e.target.closest('tr[data-key]');
+    if (!tr) return;
+    liSel = tr.dataset.key;
+    drawLief();
+    document.getElementById('lieferung-inhalt').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+  function drawLief() {
+    if (view !== 'lieferungen') return;
+    const se = dash.data('sendung_summe'), lv = dash.data('lieferung_vf');
+    const liBody = document.querySelector('.bs-li tbody'), lpBody = document.querySelector('.bs-lp tbody');
+    if (se.status !== 'ok') { failBox(liBody, 11, se.status === 'error' ? null : 'Lädt …'); failBox(lpBody, 10, 'Lädt …'); return; }
+    if (!liSel || !se.data.some((s) => s.lieferschein === liSel)) liSel = se.data.length ? se.data[0].lieferschein : null;
+    fill(liBody, se.data, [
+      { f: 'lieferschein' }, { f: 'awb' }, { f: 'flughafen' }, { f: 'eta', date: true }, { f: 'ankunft', date: true },
+      { f: 'kartons', n: true }, { f: 'stueck', n: true }, { f: 'fuer_fehlbestand', n: true }, { f: 'fuer_lager', n: true },
+      { f: 'nicht_zugeordnet', n: true }, { f: 'status' },
+    ], 'lieferschein', (tr, r) => { if (r.lieferschein === liSel) tr.classList.add('is-sel'); });
+    document.querySelector('.bs-li-name').textContent = liSel || '—';
+    if (lv.status !== 'ok') { failBox(lpBody, 10, lv.status === 'error' ? null : 'Lädt …'); return; }
+    const rows = lv.data.filter((r) => r.lieferschein === liSel);
+    if (rows.length) fill(lpBody, rows, [
+      { f: 'artikel' }, { f: 'XXS', n: true }, { f: 'XS', n: true }, { f: 'S', n: true }, { f: 'M', n: true }, { f: 'L', n: true }, { f: 'XL', n: true },
+      { f: 'gesamt', n: true }, { f: 'fuer_fehlbestand', n: true }, { f: 'in_shopify' },
+    ], 'id', (tr, r) => { if (r.in_shopify === 'nein') tr.lastElementChild.classList.add('bs-warn'); });
+    else failBox(lpBody, 10, 'Keine Positionen.');
+  }
+
+  dash.onData(() => { draw(); drawSku(); drawLief(); });
+  const named = location.hash.slice(1);
+  if (named === 'ansicht-sku') setView('sku');
+  if (named === 'ansicht-lieferungen') setView('lieferungen');
+</script>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,4 @@
+_site/
+node_modules/
+# Lieferdaten nie ins öffentliche Repo – kommen aus GitHub-Secrets
+data/*.csv
